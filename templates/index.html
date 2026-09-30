@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASR Tool - Speech to Text</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: #aaa;
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #bbb;
+            font-weight: 500;
+        }
+
+        .form-group select,
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(102, 126, 234, 0.4);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .upload-area input[type="file"] {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-area .icon {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-area p {
+            color: #888;
+        }
+
+        .upload-area .filename {
+            color: #667eea;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.85rem 2rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .options-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .error {
+            background: rgba(255, 69, 58, 0.15);
+            border: 1px solid rgba(255, 69, 58, 0.3);
+            color: #ff6b6b;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .result-section { margin-top: 1rem; }
+
+        .result-text {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            border-radius: 8px;
+            line-height: 1.8;
+            font-size: 1.05rem;
+            white-space: pre-wrap;
+            margin-bottom: 1rem;
+        }
+
+        .meta-info {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .meta-info .badge {
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .segments-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .segments-table th {
+            text-align: left;
+            padding: 0.6rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            color: #667eea;
+        }
+
+        .segments-table td {
+            padding: 0.6rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.9rem;
+        }
+
+        .api-section code {
+            background: rgba(0,0,0,0.3);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .api-section pre {
+            background: rgba(0,0,0,0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            .options-row { grid-template-columns: 1fr; }
+            .container { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎤 ASR Tool</h1>
+            <p>Automatic Speech Recognition powered by OpenAI Whisper</p>
+        </header>
+
+        {% if error %}
+        <div class="error">⚠️ {{ error }}</div>
+        {% endif %}
+
+        <div class="card">
+            <h2>Upload Audio for Transcription</h2>
+            <form method="POST" action="/transcribe" enctype="multipart/form-data">
+                <div class="form-group">
+                    <div class="upload-area" id="dropZone">
+                        <div class="icon">📁</div>
+                        <p>Drag & drop an audio file here, or click to browse</p>
+                        <p style="font-size: 0.8rem; margin-top: 0.5rem;">
+                            Supported: {{ formats | join(', ') }}
+                        </p>
+                        <div class="filename" id="fileName"></div>
+                        <input type="file" name="audio_file" id="audioFile"
+                               accept="{{ formats | join(',') }}" required>
+                    </div>
+                </div>
+
+                <div class="options-row">
+                    <div class="form-group">
+                        <label for="model">Model Size</label>
+                        <select name="model" id="model">
+                            {% for model in models %}
+                            <option value="{{ model }}" {% if model == 'base' %}selected{% endif %}>
+                                {{ model | capitalize }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="language">Language (optional)</label>
+                        <input type="text" name="language" id="language"
+                               placeholder="Auto-detect">
+                    </div>
+                    <div class="form-group">
+                        <label for="task">Task</label>
+                        <select name="task" id="task">
+                            <option value="transcribe">Transcribe</option>
+                            <option value="translate">Translate to English</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn">🚀 Transcribe Audio</button>
+            </form>
+        </div>
+
+        {% if result %}
+        <div class="card">
+            <h2>📝 Transcription Result</h2>
+            <div class="result-section">
+                <div class="meta-info">
+                    <span class="badge">📄 {{ filename }}</span>
+                    <span class="badge">🌐 Language: {{ result.language }}</span>
+                    <span class="badge">🤖 Model: {{ result.model }}</span>
+                    <span class="badge">⏱️ {{ result.duration }}s</span>
+                </div>
+
+                <div class="result-text">{{ result.text }}</div>
+
+                {% if result.segments %}
+                <details>
+                    <summary style="cursor: pointer; color: #667eea; margin-bottom: 0.5rem;">
+                        📊 Show Segments ({{ result.segments | length }})
+                    </summary>
+                    <table class="segments-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Start</th>
+                                <th>End</th>
+                                <th>Text</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for seg in result.segments %}
+                            <tr>
+                                <td>{{ seg.id + 1 }}</td>
+                                <td>{{ "%.2f" | format(seg.start) }}s</td>
+                                <td>{{ "%.2f" | format(seg.end) }}s</td>
+                                <td>{{ seg.text }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </details>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card api-section">
+            <h2>🔌 API Usage</h2>
+            <p>Use the REST API for programmatic access:</p>
+            <pre>
+# Transcribe audio
+curl -X POST http://localhost:5000/api/transcribe \
+  -F "audio_file=@your_audio.wav" \
+  -F "model=base" \
+  -F "language=en"
+
+# Detect language
+curl -X POST http://localhost:5000/api/detect-language \
+  -F "audio_file=@your_audio.wav"
+
+# List available models
+curl http://localhost:5000/api/models
+
+# Health check
+curl http://localhost:5000/api/health</pre>
+        </div>
+
+        <footer>
+            ASR Tool v1.0 &mdash; Powered by OpenAI Whisper &amp; Flask
+        </footer>
+    </div>
+
+    <script>
+        // File input display
+        document.getElementById('audioFile').addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name || '';
+            document.getElementById('fileName').textContent = fileName;
+        });
+
+        // Drag and drop visual feedback
+        const dropZone = document.getElementById('dropZone');
+        ['dragover', 'dragenter'].forEach(evt => {
+            dropZone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#667eea';
+                dropZone.style.background = 'rgba(102, 126, 234, 0.1)';
+            });
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            dropZone.addEventListener(evt, () => {
+                dropZone.style.borderColor = '';
+                dropZone.style.background = '';
+            });
+        });
+    </script>
+</body>
+</html>
