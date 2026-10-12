@@ -270,8 +270,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Pre-load the model
-    logger.info(f"Pre-loading Whisper model: {args.model}")
-    get_engine(args.model)
+    # Pre-load the model if available
+    try:
+        logger.info(f"Pre-loading Whisper model: {args.model}")
+        get_engine(args.model)
+    except Exception as e:
+        logger.warning(f"Note: Model will be loaded on demand: {e}")
 
     app.run(host=args.host, port=args.port, debug=args.debug)

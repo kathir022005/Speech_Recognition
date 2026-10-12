@@ -12,11 +12,19 @@ import time
 import logging
 from typing import Optional
 
-import whisper
-import torch
-import numpy as np
-
 logger = logging.getLogger(__name__)
+
+# Lazy imports for heavy dependencies to allow server startup and testing
+try:
+    import whisper
+    import torch
+    import numpy as np
+    WHISPER_AVAILABLE = True
+except ImportError:
+    whisper = None
+    torch = None
+    numpy = None
+    WHISPER_AVAILABLE = False
 
 # Supported audio file extensions
 SUPPORTED_FORMATS = {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".webm", ".mp4"}
@@ -62,7 +70,13 @@ class ASREngine:
             )
 
         self.model_name = model_name
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        if device:
+            self.device = device
+        elif torch is not None and torch.cuda.is_available():
+            self.device = "cuda"
+        else:
+            self.device = "cpu"
+
         self.model = None
 
         logger.info(
@@ -72,6 +86,12 @@ class ASREngine:
 
     def _load_model(self) -> None:
         """Load the Whisper model into memory."""
+        if not WHISPER_AVAILABLE:
+            raise RuntimeError(
+                "OpenAI Whisper or PyTorch is not yet installed in the current Python environment. "
+                "Please run `pip install -r requirements.txt` to install the speech recognition dependencies."
+            )
+
         logger.info(f"Loading Whisper model '{self.model_name}'...")
         start_time = time.time()
 
@@ -117,6 +137,9 @@ class ASREngine:
                 f"Unsupported audio format '{file_ext}'. "
                 f"Supported formats: {SUPPORTED_FORMATS}"
             )
+
+        if self.model is None:
+            self._load_model()
 
         logger.info(f"Transcribing: {audio_path}")
         start_time = time.time()
@@ -165,6 +188,9 @@ class ASREngine:
         if not os.path.exists(audio_path):
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
+        if self.model is None:
+            self._load_model()
+
         logger.info(f"Detecting language for: {audio_path}")
 
         audio = whisper.load_audio(audio_path)
@@ -186,11 +212,11 @@ class ASREngine:
 
     def get_model_info(self) -> dict:
         """Get information about the currently loaded model."""
-        num_params = sum(p.numel() for p in self.model.parameters())
+        num_params = sum(p.numel() for p in self.model.parameters()) if self.model else "Unloaded"
         return {
             "model_name": self.model_name,
             "device": self.device,
-            "parameters": f"{num_params:,}",
+            "parameters": f"{num_params:,}" if isinstance(num_params, int) else num_params,
             "supported_formats": list(SUPPORTED_FORMATS),
             "available_models": AVAILABLE_MODELS,
         }
