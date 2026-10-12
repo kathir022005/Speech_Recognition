@@ -470,7 +470,7 @@ The CLI provides verbose output with language, model info, processing time, full
 
 | Name | Role |
 |---|---|
-| **KATHIRESAN S** | Developer & Maintainer |
+| **KATHIR A** | Developer & Maintainer |
 
 ### License
 
