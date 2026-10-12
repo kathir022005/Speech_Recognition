@@ -7,7 +7,8 @@
 
 A production-ready **Automatic Speech Recognition (ASR)** tool powered by **OpenAI Whisper**. The system transcribes audio files into text with support for **100+ languages**, multiple audio formats, real-time language detection, timestamped segments, and SRT subtitle export — all through a modern web interface, REST API, and command-line interface.
 
-**Team Name:** KATHIRESAN S
+**Team Name:** SMS
+
 
 ---
 
