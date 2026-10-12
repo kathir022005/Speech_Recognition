@@ -100,6 +100,55 @@ class ASREngine:
         elapsed = time.time() - start_time
         logger.info(f"Model loaded in {elapsed:.2f}s")
 
+    def _load_audio(self, audio_path: str):
+        """
+        Load audio file as a normalized float32 numpy array.
+        Uses pure Python wave for WAV files or whisper.load_audio (ffmpeg) for other formats.
+        """
+        ext = os.path.splitext(audio_path)[1].lower()
+        if ext == ".wav":
+            try:
+                import wave
+                with wave.open(audio_path, "rb") as wf:
+                    sr = wf.getframerate()
+                    n_channels = wf.getnchannels()
+                    sampwidth = wf.getsampwidth()
+                    frames = wf.readframes(wf.getnframes())
+
+                    if sampwidth == 2:
+                        audio = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
+                    elif sampwidth == 4:
+                        audio = np.frombuffer(frames, dtype=np.int32).astype(np.float32) / 2147483648.0
+                    elif sampwidth == 1:
+                        audio = (np.frombuffer(frames, dtype=np.uint8).astype(np.float32) - 128.0) / 128.0
+                    else:
+                        raise ValueError(f"Unsupported sample width: {sampwidth}")
+
+                    if n_channels > 1:
+                        audio = audio.reshape(-1, n_channels).mean(axis=1)
+
+                    # Resample to 16000Hz if needed
+                    if sr != 16000 and len(audio) > 0:
+                        target_len = int(len(audio) * 16000 / sr)
+                        audio = np.interp(
+                            np.linspace(0, len(audio), target_len, endpoint=False),
+                            np.arange(len(audio)),
+                            audio
+                        ).astype(np.float32)
+
+                    return audio
+            except Exception as e:
+                logger.warning(f"Native WAV decode fallback ({e}), attempting ffmpeg backend...")
+
+        # Fallback to ffmpeg backend via whisper.load_audio
+        try:
+            return whisper.load_audio(audio_path)
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to decode audio file '{os.path.basename(audio_path)}'. "
+                f"For non-WAV formats, FFmpeg must be installed. Error: {e}"
+            )
+
     def transcribe(
         self,
         audio_path: str,
@@ -144,6 +193,8 @@ class ASREngine:
         logger.info(f"Transcribing: {audio_path}")
         start_time = time.time()
 
+        audio = self._load_audio(audio_path)
+
         options = {
             "task": task,
             "verbose": verbose,
@@ -151,7 +202,7 @@ class ASREngine:
         if language:
             options["language"] = language
 
-        result = self.model.transcribe(audio_path, **options)
+        result = self.model.transcribe(audio, **options)
 
         elapsed = time.time() - start_time
         logger.info(f"Transcription completed in {elapsed:.2f}s")
@@ -193,7 +244,7 @@ class ASREngine:
 
         logger.info(f"Detecting language for: {audio_path}")
 
-        audio = whisper.load_audio(audio_path)
+        audio = self._load_audio(audio_path)
         audio = whisper.pad_or_trim(audio)
 
         mel = whisper.log_mel_spectrogram(audio).to(self.device)
