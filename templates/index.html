@@ -3,380 +3,1205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASR Tool - Speech to Text</title>
+    <title>ASR Tool - Neural Speech Recognition Studio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #131b2e;
+            --bg-card: rgba(22, 31, 53, 0.75);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-primary: #6366f1;
+            --accent-secondary: #a855f7;
+            --accent-gradient: linear-gradient(135deg, #6366f1, #a855f7);
+            --accent-glow: rgba(99, 102, 241, 0.35);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            color: #e0e0e0;
+            background: radial-gradient(circle at 10% 20%, #151b33 0%, #0b0f19 90%);
+            color: var(--text-primary);
             min-height: 100vh;
+            padding-bottom: 3rem;
         }
 
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
+        /* Top Bar */
+        .top-navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2.5rem;
+            background: rgba(11, 15, 25, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        header h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(90deg, #667eea, #764ba2);
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.35rem;
+            font-weight: 700;
+            background: var(--accent-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
         }
 
-        header p {
-            color: #aaa;
-            font-size: 1.1rem;
+        .brand i { font-size: 1.5rem; -webkit-text-fill-color: #a855f7; }
+
+        .system-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+            padding: 0.4rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
         }
 
-        .card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #10b981;
+            animation: pulse-ring 1.8s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.4); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        .main-container {
+            max-width: 1100px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        /* Hero Header */
+        .hero-section {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .hero-section h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin-bottom: 0.6rem;
+            background: linear-gradient(135deg, #ffffff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-section p {
+            color: var(--text-secondary);
+            font-size: 1.15rem;
+            max-width: 650px;
+            margin: 0 auto;
+        }
+
+        /* Card Container */
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
             padding: 2rem;
-            margin-bottom: 1.5rem;
-            backdrop-filter: blur(10px);
+            margin-bottom: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
         }
 
-        .card h2 {
-            color: #667eea;
-            margin-bottom: 1.5rem;
-            font-size: 1.3rem;
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: var(--accent-gradient);
         }
 
-        .form-group {
-            margin-bottom: 1.2rem;
+        /* Tab Controls */
+        .tab-headers {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.75rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
         }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #bbb;
-            font-weight: 500;
-        }
-
-        .form-group select,
-        .form-group input[type="text"] {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 8px;
-            color: #e0e0e0;
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
             font-size: 1rem;
-            transition: border-color 0.3s;
+            font-weight: 600;
+            padding: 0.6rem 1.25rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .form-group select:focus,
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
+        .tab-btn:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.05); }
+
+        .tab-btn.active {
+            color: #ffffff;
+            background: var(--accent-gradient);
+            box-shadow: 0 4px 15px var(--accent-glow);
         }
 
-        .upload-area {
-            border: 2px dashed rgba(102, 126, 234, 0.4);
-            border-radius: 12px;
-            padding: 2rem;
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; animation: fadeIn 0.3s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Drop Zone */
+        .drop-zone {
+            border: 2px dashed rgba(99, 102, 241, 0.4);
+            border-radius: 16px;
+            padding: 2.5rem 1.5rem;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.25s ease;
+            background: rgba(15, 23, 42, 0.5);
             position: relative;
         }
 
-        .upload-area:hover {
-            border-color: #667eea;
-            background: rgba(102, 126, 234, 0.05);
+        .drop-zone:hover {
+            border-color: #a855f7;
+            background: rgba(99, 102, 241, 0.08);
+            transform: translateY(-2px);
         }
 
-        .upload-area input[type="file"] {
+        .drop-zone input[type="file"] {
             position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            inset: 0;
             opacity: 0;
             cursor: pointer;
-        }
-
-        .upload-area .icon {
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .upload-area p {
-            color: #888;
-        }
-
-        .upload-area .filename {
-            color: #667eea;
-            font-weight: bold;
-            margin-top: 0.5rem;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 0.85rem 2rem;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
             width: 100%;
-            transition: transform 0.2s, box-shadow 0.2s;
+            height: 100%;
         }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .options-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 1rem;
-        }
-
-        .error {
-            background: rgba(255, 69, 58, 0.15);
-            border: 1px solid rgba(255, 69, 58, 0.3);
-            color: #ff6b6b;
-            padding: 1rem;
+        .drop-zone i { font-size: 3rem; color: #818cf8; margin-bottom: 1rem; }
+        .drop-zone .title { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.4rem; }
+        .drop-zone .subtitle { color: var(--text-secondary); font-size: 0.9rem; }
+        .file-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid #6366f1;
             border-radius: 8px;
+            color: #c7d2fe;
+            font-weight: 600;
+        }
+
+        /* Live Microphone UI */
+        .mic-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            gap: 1.25rem;
+        }
+
+        .mic-button-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .mic-btn {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            border: none;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            box-shadow: 0 10px 25px var(--accent-glow);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+
+        .mic-btn:hover { transform: scale(1.08); }
+
+        .mic-btn.recording {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 0 35px rgba(239, 68, 68, 0.7);
+            animation: pulse-mic 1.2s infinite;
+        }
+
+        @keyframes pulse-mic {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.12); }
+            100% { transform: scale(1); }
+        }
+
+        .timer-display {
+            font-size: 1.4rem;
+            font-family: monospace;
+            font-weight: 700;
+            color: #cbd5e1;
+        }
+
+        .waveform-canvas {
+            width: 100%;
+            max-width: 500px;
+            height: 70px;
+            background: rgba(15, 23, 42, 0.7);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Sample Selector Cards */
+        .samples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .sample-item {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .sample-item:hover {
+            border-color: #818cf8;
+            background: rgba(99, 102, 241, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .sample-item .title { font-weight: 600; color: #e2e8f0; display: flex; align-items: center; gap: 0.5rem; }
+        .sample-item audio { width: 100%; height: 35px; border-radius: 6px; }
+
+        /* Configuration Grid */
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+            margin: 1.75rem 0;
+            background: rgba(15, 23, 42, 0.4);
+            padding: 1.25rem;
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+        }
+
+        .config-item label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .config-item select, .config-item input {
+            width: 100%;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.65rem 0.9rem;
+            color: #f8fafc;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .config-item select:focus, .config-item input:focus {
+            border-color: #6366f1;
+        }
+
+        /* Action Button */
+        .btn-action {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 1rem 2rem;
+            background: var(--accent-gradient);
+            border: none;
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 25px var(--accent-glow);
+            transition: all 0.25s ease;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(168, 85, 247, 0.4);
+        }
+
+        .btn-action:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Results Display Card */
+        .results-card {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .results-card.visible { display: block; }
+
+        .meta-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .kpi-badge {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .kpi-badge strong { color: #f8fafc; }
+
+        .transcript-box {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 1.5rem;
+            font-size: 1.15rem;
+            line-height: 1.8;
+            color: #f1f5f9;
+            margin-bottom: 1.5rem;
+            white-space: pre-wrap;
+            position: relative;
+        }
+
+        .action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
             margin-bottom: 1.5rem;
         }
 
-        .result-section { margin-top: 1rem; }
-
-        .result-text {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 1.5rem;
+        .btn-chip {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid var(--border-color);
+            color: #cbd5e1;
+            padding: 0.5rem 1rem;
             border-radius: 8px;
-            line-height: 1.8;
-            font-size: 1.05rem;
-            white-space: pre-wrap;
-            margin-bottom: 1rem;
-        }
-
-        .meta-info {
-            display: flex;
-            gap: 1.5rem;
-            flex-wrap: wrap;
-            margin-bottom: 1rem;
-        }
-
-        .meta-info .badge {
-            background: rgba(102, 126, 234, 0.2);
-            border: 1px solid rgba(102, 126, 234, 0.3);
-            padding: 0.4rem 0.8rem;
-            border-radius: 20px;
             font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-chip:hover {
+            background: #6366f1;
+            color: #ffffff;
+            border-color: #6366f1;
+        }
+
+        /* Segments Table */
+        .segments-wrapper {
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
         }
 
         .segments-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 1rem;
+            font-size: 0.9rem;
         }
 
         .segments-table th {
+            background: rgba(30, 41, 59, 0.9);
+            color: #94a3b8;
+            font-weight: 600;
+            padding: 0.75rem 1rem;
             text-align: left;
-            padding: 0.6rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            color: #667eea;
         }
 
         .segments-table td {
-            padding: 0.6rem;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            font-size: 0.9rem;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #cbd5e1;
         }
 
-        .api-section code {
-            background: rgba(0,0,0,0.3);
+        .segments-table tr:hover td {
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .ts-tag {
+            font-family: monospace;
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
             padding: 0.2rem 0.5rem;
             border-radius: 4px;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
 
-        .api-section pre {
-            background: rgba(0,0,0,0.3);
-            padding: 1rem;
-            border-radius: 8px;
+        /* Educational Architecture Section */
+        .explainer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .step-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            position: relative;
+        }
+
+        .step-card .num {
+            position: absolute;
+            top: 1rem; right: 1rem;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: rgba(99, 102, 241, 0.25);
+        }
+
+        .step-card h3 { font-size: 1.05rem; color: #a5b4fc; margin-bottom: 0.5rem; }
+        .step-card p { font-size: 0.85rem; color: #94a3b8; line-height: 1.5; }
+
+        /* Models Table */
+        .model-spec-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.88rem;
+        }
+
+        .model-spec-table th, .model-spec-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .model-spec-table th { color: #818cf8; background: rgba(30, 41, 59, 0.5); }
+        .badge-recommended {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Loader Overlay */
+        .loader-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(11, 15, 25, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 50;
+            border-radius: 20px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .loader-overlay.active { display: flex; }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(99, 102, 241, 0.2);
+            border-top: 4px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* API Console */
+        pre.code-block {
+            background: #090d16;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
             overflow-x: auto;
+            font-family: Consolas, monospace;
             font-size: 0.85rem;
-            margin-top: 0.5rem;
+            color: #e2e8f0;
+            line-height: 1.6;
         }
 
-        footer {
-            text-align: center;
-            padding: 2rem 0;
-            color: #666;
-            font-size: 0.85rem;
-        }
-
-        @media (max-width: 768px) {
-            .options-row { grid-template-columns: 1fr; }
-            .container { padding: 1rem; }
+        @media (max-width: 640px) {
+            .top-navbar { padding: 1rem; }
+            .hero-section h1 { font-size: 2.1rem; }
+            .config-grid { grid-template-columns: 1fr; }
+            .tab-headers { flex-wrap: wrap; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🎤 ASR Tool</h1>
-            <p>Automatic Speech Recognition powered by OpenAI Whisper</p>
-        </header>
 
-        {% if error %}
-        <div class="error">⚠️ {{ error }}</div>
-        {% endif %}
+    <!-- Navbar -->
+    <header class="top-navbar">
+        <div class="brand">
+            <i class="fa-solid fa-microphone-lines"></i>
+            <span>ASR Tool Studio</span>
+        </div>
+        <div class="system-pill">
+            <div class="pulse-dot"></div>
+            <span>Server Live : Port 5000</span>
+        </div>
+    </header>
 
-        <div class="card">
-            <h2>Upload Audio for Transcription</h2>
-            <form method="POST" action="/transcribe" enctype="multipart/form-data">
-                <div class="form-group">
-                    <div class="upload-area" id="dropZone">
-                        <div class="icon">📁</div>
-                        <p>Drag & drop an audio file here, or click to browse</p>
-                        <p style="font-size: 0.8rem; margin-top: 0.5rem;">
-                            Supported: {{ formats | join(', ') }}
-                        </p>
-                        <div class="filename" id="fileName"></div>
-                        <input type="file" name="audio_file" id="audioFile"
-                               accept="{{ formats | join(',') }}" required>
-                    </div>
-                </div>
-
-                <div class="options-row">
-                    <div class="form-group">
-                        <label for="model">Model Size</label>
-                        <select name="model" id="model">
-                            {% for model in models %}
-                            <option value="{{ model }}" {% if model == 'base' %}selected{% endif %}>
-                                {{ model | capitalize }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="language">Language (optional)</label>
-                        <input type="text" name="language" id="language"
-                               placeholder="Auto-detect">
-                    </div>
-                    <div class="form-group">
-                        <label for="task">Task</label>
-                        <select name="task" id="task">
-                            <option value="transcribe">Transcribe</option>
-                            <option value="translate">Translate to English</option>
-                        </select>
-                    </div>
-                </div>
-
-                <button type="submit" class="btn">🚀 Transcribe Audio</button>
-            </form>
+    <div class="main-container">
+        <!-- Hero Title -->
+        <div class="hero-section">
+            <h1>Automatic Speech Recognition</h1>
+            <p>High-accuracy offline speech-to-text powered by OpenAI Whisper and Python Flask</p>
         </div>
 
-        {% if result %}
-        <div class="card">
-            <h2>📝 Transcription Result</h2>
-            <div class="result-section">
-                <div class="meta-info">
-                    <span class="badge">📄 {{ filename }}</span>
-                    <span class="badge">🌐 Language: {{ result.language }}</span>
-                    <span class="badge">🤖 Model: {{ result.model }}</span>
-                    <span class="badge">⏱️ {{ result.duration }}s</span>
+        <!-- Main Workspace Card -->
+        <div class="glass-card" id="workspaceCard">
+            <!-- Loader Overlay -->
+            <div class="loader-overlay" id="loadingOverlay">
+                <div class="spinner"></div>
+                <h3 style="color: #f8fafc;">Transcribing Audio with Whisper...</h3>
+                <p style="color: #94a3b8; font-size: 0.9rem;" id="loadingStatus">Computing log-mel spectrogram and beam decoding</p>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div class="tab-headers">
+                <button type="button" class="tab-btn active" onclick="switchTab('upload')">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Upload File
+                </button>
+                <button type="button" class="tab-btn" onclick="switchTab('mic')">
+                    <i class="fa-solid fa-microphone"></i> Live Microphone
+                </button>
+                <button type="button" class="tab-btn" onclick="switchTab('demo')">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 1-Click Demos
+                </button>
+            </div>
+
+            <!-- Tab 1: File Upload -->
+            <div class="tab-panel active" id="tab-upload">
+                <div class="drop-zone" id="dropZone">
+                    <i class="fa-solid fa-file-audio"></i>
+                    <div class="title">Drag & drop your audio recording here</div>
+                    <div class="subtitle">Supported Formats: WAV, MP3, FLAC, OGG, M4A, WebM (Max 100MB)</div>
+                    <input type="file" id="fileInput" accept=".wav,.mp3,.flac,.ogg,.m4a,.webm,.mp4">
+                    <div id="fileSelectedDisplay" style="display:none;" class="file-badge">
+                        <i class="fa-solid fa-check-circle"></i> <span id="selectedFileName">filename.wav</span>
+                    </div>
                 </div>
+                <div id="fileAudioPreview" style="margin-top: 1rem; display:none; text-align: center;">
+                    <audio id="fileAudioPlayer" controls style="width: 100%; max-width: 500px; height: 38px;"></audio>
+                </div>
+            </div>
 
-                <div class="result-text">{{ result.text }}</div>
+            <!-- Tab 2: Live Microphone -->
+            <div class="tab-panel" id="tab-mic">
+                <div class="mic-container">
+                    <div class="timer-display" id="micTimer">00:00</div>
+                    <canvas class="waveform-canvas" id="waveformVisualizer"></canvas>
+                    <div class="mic-button-wrapper">
+                        <button type="button" class="mic-btn" id="recordToggleBtn" onclick="toggleRecording()">
+                            <i class="fa-solid fa-microphone"></i>
+                        </button>
+                    </div>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;" id="micStatusText">
+                        Click the microphone to start recording your voice
+                    </p>
+                    <div id="recordedAudioPreview" style="display:none; width: 100%; text-align: center;">
+                        <audio id="recordedAudioPlayer" controls style="width: 100%; max-width: 500px; height: 38px;"></audio>
+                    </div>
+                </div>
+            </div>
 
-                {% if result.segments %}
-                <details>
-                    <summary style="cursor: pointer; color: #667eea; margin-bottom: 0.5rem;">
-                        📊 Show Segments ({{ result.segments | length }})
-                    </summary>
+            <!-- Tab 3: Quick Demos -->
+            <div class="tab-panel" id="tab-demo">
+                <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.95rem;">
+                    Test the system instantly without uploading any file. Click any sample below:
+                </p>
+                <div class="samples-grid">
+                    <div class="sample-item" onclick="selectDemoSample('welcome_demo.wav')">
+                        <div class="title"><i class="fa-solid fa-play-circle" style="color:#a855f7;"></i> Demo 1: Welcome Speech</div>
+                        <p style="font-size:0.85rem; color:#94a3b8;">"Welcome to the Automatic Speech Recognition Tool powered by OpenAI Whisper..."</p>
+                        <audio src="/sample_audio/welcome_demo.wav" controls onclick="event.stopPropagation()"></audio>
+                    </div>
+                    <div class="sample-item" onclick="selectDemoSample('numbers_demo.wav')">
+                        <div class="title"><i class="fa-solid fa-play-circle" style="color:#a855f7;"></i> Demo 2: Student Register Speech</div>
+                        <p style="font-size:0.85rem; color:#94a3b8;">"My register number is RA2311003050120, department of computer science..."</p>
+                        <audio src="/sample_audio/numbers_demo.wav" controls onclick="event.stopPropagation()"></audio>
+                    </div>
+                </div>
+                <div id="demoSelectedDisplay" style="display:none; margin-top: 1rem;" class="file-badge">
+                    <i class="fa-solid fa-check-circle"></i> Selected Demo: <span id="selectedDemoName">none</span>
+                </div>
+            </div>
+
+            <!-- Configuration Options Grid -->
+            <div class="config-grid">
+                <div class="config-item">
+                    <label><i class="fa-solid fa-brain"></i> Model Size</label>
+                    <select id="configModel">
+                        <option value="tiny">Tiny (39M params - Ultra Fast)</option>
+                        <option value="base" selected>Base (74M params - Balanced)</option>
+                        <option value="small">Small (244M params - High Accuracy)</option>
+                        <option value="medium">Medium (769M params - Very High)</option>
+                        <option value="large">Large (1550M params - State of the Art)</option>
+                    </select>
+                </div>
+                <div class="config-item">
+                    <label><i class="fa-solid fa-language"></i> Spoken Language</label>
+                    <input type="text" id="configLanguage" placeholder="Auto-detect (or 'en', 'es', 'ta')">
+                </div>
+                <div class="config-item">
+                    <label><i class="fa-solid fa-list-check"></i> Processing Task</label>
+                    <select id="configTask">
+                        <option value="transcribe" selected>Transcribe to Text</option>
+                        <option value="translate">Translate to English</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Main Submit Button -->
+            <button type="button" class="btn-action" id="submitTranscribeBtn" onclick="executeTranscription()">
+                <i class="fa-solid fa-bolt"></i>
+                <span id="submitBtnText">Transcribe Speech Now</span>
+            </button>
+        </div>
+
+        <!-- Transcription Results Section -->
+        <div class="glass-card results-card" id="resultsContainer">
+            <h2 style="color: #c7d2fe; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.6rem;">
+                <i class="fa-solid fa-file-lines" style="color: #6366f1;"></i> Transcription Result
+            </h2>
+
+            <!-- KPI Badges -->
+            <div class="meta-badges">
+                <div class="kpi-badge"><i class="fa-solid fa-file-audio"></i> <span id="resFile">audio.wav</span></div>
+                <div class="kpi-badge"><i class="fa-solid fa-language"></i> Lang: <strong id="resLang">en</strong></div>
+                <div class="kpi-badge"><i class="fa-solid fa-microchip"></i> Model: <strong id="resModel">base</strong></div>
+                <div class="kpi-badge"><i class="fa-solid fa-stopwatch"></i> Duration: <strong id="resDuration">0.0s</strong></div>
+                <div class="kpi-badge"><i class="fa-solid fa-font"></i> Words: <strong id="resWordCount">0</strong></div>
+            </div>
+
+            <!-- Main Transcription Output Box -->
+            <div class="transcript-box" id="resTextContent">
+                Transcribed output will appear here...
+            </div>
+
+            <!-- Quick Export Action Chips -->
+            <div class="action-row">
+                <button type="button" class="btn-chip" onclick="copyTranscription()">
+                    <i class="fa-regular fa-copy"></i> Copy Text
+                </button>
+                <button type="button" class="btn-chip" onclick="downloadTxt()">
+                    <i class="fa-solid fa-download"></i> Download .TXT
+                </button>
+                <button type="button" class="btn-chip" onclick="downloadSrt()">
+                    <i class="fa-solid fa-closed-captioning"></i> Download .SRT
+                </button>
+                <button type="button" class="btn-chip" onclick="downloadJson()">
+                    <i class="fa-solid fa-code"></i> Download JSON
+                </button>
+            </div>
+
+            <!-- Segments Breakdown -->
+            <details id="segmentsDetails" style="margin-top: 1rem;">
+                <summary style="cursor: pointer; color: #818cf8; font-weight: 600; padding: 0.5rem 0;">
+                    <i class="fa-solid fa-layer-group"></i> Inspect Timestamped Segments (<span id="segmentsCount">0</span>)
+                </summary>
+                <div class="segments-wrapper">
                     <table class="segments-table">
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>Start</th>
-                                <th>End</th>
-                                <th>Text</th>
+                                <th>Timestamp</th>
+                                <th>Segment Speech Content</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {% for seg in result.segments %}
-                            <tr>
-                                <td>{{ seg.id + 1 }}</td>
-                                <td>{{ "%.2f" | format(seg.start) }}s</td>
-                                <td>{{ "%.2f" | format(seg.end) }}s</td>
-                                <td>{{ seg.text }}</td>
-                            </tr>
-                            {% endfor %}
+                        <tbody id="segmentsTableBody">
+                            <!-- Populated dynamically -->
                         </tbody>
                     </table>
-                </details>
-                {% endif %}
-            </div>
+                </div>
+            </details>
         </div>
-        {% endif %}
 
-        <div class="card api-section">
-            <h2>🔌 API Usage</h2>
-            <p>Use the REST API for programmatic access:</p>
-            <pre>
-# Transcribe audio
+        <!-- Architecture & How It Works Explainer Card -->
+        <div class="glass-card">
+            <h2 style="color: #c7d2fe; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.6rem;">
+                <i class="fa-solid fa-diagram-project" style="color: #a855f7;"></i> How ASR Works in this System
+            </h2>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6;">
+                The ASR Tool utilizes an end-to-end Sequence-to-Sequence Deep Transformer architecture trained on 680,000 hours of multi-accented speech data:
+            </p>
+
+            <div class="explainer-grid">
+                <div class="step-card">
+                    <span class="num">01</span>
+                    <h3>Audio Resampling</h3>
+                    <p>Raw acoustic signals are decoded into 16-bit PCM mono waveforms normalized at 16,000 Hz.</p>
+                </div>
+                <div class="step-card">
+                    <span class="num">02</span>
+                    <h3>Log-Mel Spectrogram</h3>
+                    <p>Calculates an 80-channel log-magnitude spectrogram over 25ms windows with 10ms hops.</p>
+                </div>
+                <div class="step-card">
+                    <span class="num">03</span>
+                    <h3>Transformer Encoder</h3>
+                    <p>Processes spectrogram patches through stacked 1D convolutions and multi-head self-attention.</p>
+                </div>
+                <div class="step-card">
+                    <span class="num">04</span>
+                    <h3>Autoregressive Decoder</h3>
+                    <p>Predicts target token sequences, timestamps, and language identities using beam search.</p>
+                </div>
+            </div>
+
+            <!-- Model Benchmark Matrix -->
+            <h3 style="color: #e2e8f0; font-size: 1.1rem; margin: 1.5rem 0 0.5rem 0;">
+                <i class="fa-solid fa-table-cells"></i> Whisper Model Comparison Matrix
+            </h3>
+            <table class="model-spec-table">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Parameters</th>
+                        <th>Relative Speed</th>
+                        <th>RAM Footprint</th>
+                        <th>Recommended Use</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Tiny</strong></td>
+                        <td>39 M</td>
+                        <td>~32x</td>
+                        <td>~350 MB</td>
+                        <td>Ultra-fast drafts & low-power devices</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Base</strong> <span class="badge-recommended">Default</span></td>
+                        <td>74 M</td>
+                        <td>~16x</td>
+                        <td>~500 MB</td>
+                        <td>Optimal balance of accuracy and CPU speed</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Small</strong></td>
+                        <td>244 M</td>
+                        <td>~6x</td>
+                        <td>~1.0 GB</td>
+                        <td>High precision multi-lingual transcription</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Medium</strong></td>
+                        <td>769 M</td>
+                        <td>~2x</td>
+                        <td>~2.5 GB</td>
+                        <td>Complex accents and noisy environments</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Large</strong></td>
+                        <td>1550 M</td>
+                        <td>1x</td>
+                        <td>~5.0 GB</td>
+                        <td>Maximum research-grade transcription accuracy</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- REST API Interactive Card -->
+        <div class="glass-card">
+            <h2 style="color: #c7d2fe; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.6rem;">
+                <i class="fa-solid fa-terminal" style="color: #10b981;"></i> REST API Integration
+            </h2>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1rem;">
+                Integrate automated speech recognition directly into your Python, JavaScript, or mobile apps:
+            </p>
+            <pre class="code-block"><code># 1. Transcribe Audio File (Returns JSON with timestamps)
 curl -X POST http://localhost:5000/api/transcribe \
-  -F "audio_file=@your_audio.wav" \
+  -F "audio_file=@your_recording.wav" \
   -F "model=base" \
   -F "language=en"
 
-# Detect language
+# 2. Spoken Language Detection
 curl -X POST http://localhost:5000/api/detect-language \
-  -F "audio_file=@your_audio.wav"
+  -F "audio_file=@your_recording.wav"
 
-# List available models
-curl http://localhost:5000/api/models
-
-# Health check
-curl http://localhost:5000/api/health</pre>
+# 3. Health & Diagnostic Check
+curl http://localhost:5000/api/health</code></pre>
         </div>
 
-        <footer>
-            ASR Tool v1.0 &mdash; Powered by OpenAI Whisper &amp; Flask
-        </footer>
     </div>
 
+    <!-- Interactive Client JS -->
     <script>
-        // File input display
-        document.getElementById('audioFile').addEventListener('change', function(e) {
-            const fileName = e.target.files[0]?.name || '';
-            document.getElementById('fileName').textContent = fileName;
+        let currentTab = 'upload';
+        let selectedFile = null;
+        let selectedDemo = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordedBlob = null;
+        let isRecording = false;
+        let timerInterval = null;
+        let recordSeconds = 0;
+        let currentResult = null;
+
+        // Switch Tab UI
+        function switchTab(tabId) {
+            currentTab = tabId;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+            if (tabId === 'upload') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('tab-upload').classList.add('active');
+            } else if (tabId === 'mic') {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('tab-mic').classList.add('active');
+            } else if (tabId === 'demo') {
+                document.querySelectorAll('.tab-btn')[2].classList.add('active');
+                document.getElementById('tab-demo').classList.add('active');
+            }
+        }
+
+        // File Selection Handlers
+        const fileInput = document.getElementById('fileInput');
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
         });
 
-        // Drag and drop visual feedback
         const dropZone = document.getElementById('dropZone');
         ['dragover', 'dragenter'].forEach(evt => {
             dropZone.addEventListener(evt, (e) => {
                 e.preventDefault();
-                dropZone.style.borderColor = '#667eea';
-                dropZone.style.background = 'rgba(102, 126, 234, 0.1)';
+                dropZone.style.borderColor = '#a855f7';
+                dropZone.style.background = 'rgba(99, 102, 241, 0.15)';
             });
         });
         ['dragleave', 'drop'].forEach(evt => {
-            dropZone.addEventListener(evt, () => {
+            dropZone.addEventListener(evt, (e) => {
+                e.preventDefault();
                 dropZone.style.borderColor = '';
                 dropZone.style.background = '';
+                if (evt === 'drop' && e.dataTransfer.files.length > 0) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileSelect(e.dataTransfer.files[0]);
+                }
             });
         });
+
+        function handleFileSelect(file) {
+            selectedFile = file;
+            document.getElementById('selectedFileName').textContent = `${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
+            document.getElementById('fileSelectedDisplay').style.display = 'inline-flex';
+
+            const player = document.getElementById('fileAudioPlayer');
+            player.src = URL.createObjectURL(file);
+            document.getElementById('fileAudioPreview').style.display = 'block';
+        }
+
+        // Demo Sample Selector
+        function selectDemoSample(filename) {
+            selectedDemo = filename;
+            document.getElementById('selectedDemoName').textContent = filename;
+            document.getElementById('demoSelectedDisplay').style.display = 'inline-flex';
+        }
+
+        // Microphone Live Audio Handling
+        async function toggleRecording() {
+            const btn = document.getElementById('recordToggleBtn');
+            const statusText = document.getElementById('micStatusText');
+
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+                    mediaRecorder.onstop = () => {
+                        recordedBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(recordedBlob);
+                        const player = document.getElementById('recordedAudioPlayer');
+                        player.src = audioUrl;
+                        document.getElementById('recordedAudioPreview').style.display = 'block';
+                        statusText.textContent = 'Recording captured! Click "Transcribe Speech Now" below.';
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    btn.classList.add('recording');
+                    statusText.textContent = 'Listening... Speak clearly into your microphone.';
+
+                    // Timer
+                    recordSeconds = 0;
+                    document.getElementById('micTimer').textContent = '00:00';
+                    timerInterval = setInterval(() => {
+                        recordSeconds++;
+                        const mins = String(Math.floor(recordSeconds / 60)).padStart(2, '0');
+                        const secs = String(recordSeconds % 60).padStart(2, '0');
+                        document.getElementById('micTimer').textContent = `${mins}:${secs}`;
+                    }, 1000);
+
+                    setupAudioVisualizer(stream);
+
+                } catch (err) {
+                    alert('Microphone access denied or unavailable: ' + err.message);
+                }
+            } else {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                btn.classList.remove('recording');
+                clearInterval(timerInterval);
+            }
+        }
+
+        // Simple Waveform Visualizer
+        function setupAudioVisualizer(stream) {
+            const canvas = document.getElementById('waveformVisualizer');
+            const ctx = canvas.getContext('2d');
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioCtx.createMediaStreamSource(stream);
+            const analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function draw() {
+                if (!isRecording) return;
+                requestAnimationFrame(draw);
+                analyser.getByteFrequencyData(dataArray);
+
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                const barWidth = (canvas.width / bufferLength) * 2.5;
+                let barHeight;
+                let x = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    barHeight = dataArray[i] / 4;
+                    ctx.fillStyle = `rgb(${barHeight + 100}, 99, 241)`;
+                    ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                    x += barWidth + 1;
+                }
+            }
+            draw();
+        }
+
+        // Execute Transcription
+        async function executeTranscription() {
+            const model = document.getElementById('configModel').value;
+            const language = document.getElementById('configLanguage').value.trim();
+            const task = document.getElementById('configTask').value;
+
+            const loader = document.getElementById('loadingOverlay');
+            loader.classList.add('active');
+
+            try {
+                let responseData;
+
+                if (currentTab === 'demo') {
+                    if (!selectedDemo) {
+                        alert('Please select a demo audio sample first.');
+                        loader.classList.remove('active');
+                        return;
+                    }
+                    const res = await fetch('/api/quick-demo', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sample: selectedDemo, model: model })
+                    });
+                    responseData = await res.json();
+
+                } else {
+                    const formData = new FormData();
+                    formData.append('model', model);
+                    if (language) formData.append('language', language);
+                    formData.append('task', task);
+
+                    if (currentTab === 'upload') {
+                        if (!selectedFile) {
+                            alert('Please select or drag an audio file first.');
+                            loader.classList.remove('active');
+                            return;
+                        }
+                        formData.append('audio_file', selectedFile);
+                    } else if (currentTab === 'mic') {
+                        if (!recordedBlob) {
+                            alert('Please record speech using the microphone first.');
+                            loader.classList.remove('active');
+                            return;
+                        }
+                        formData.append('audio_file', recordedBlob, 'mic_recording.wav');
+                    }
+
+                    const res = await fetch('/transcribe', {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        body: formData
+                    });
+                    responseData = await res.json();
+                }
+
+                loader.classList.remove('active');
+
+                if (responseData.success) {
+                    renderTranscriptionResult(responseData);
+                } else {
+                    alert('Transcription error: ' + (responseData.error || 'Unknown failure'));
+                }
+
+            } catch (err) {
+                loader.classList.remove('active');
+                alert('Request failed: ' + err.message);
+            }
+        }
+
+        // Render Results
+        function renderTranscriptionResult(data) {
+            currentResult = data;
+            const result = data.result;
+
+            document.getElementById('resFile').textContent = data.filename || 'Audio Recording';
+            document.getElementById('resLang').textContent = (result.language || 'en').toUpperCase();
+            document.getElementById('resModel').textContent = (result.model || 'base').toUpperCase();
+            document.getElementById('resDuration').textContent = `${result.duration}s`;
+
+            const text = result.text || '';
+            document.getElementById('resTextContent').textContent = text;
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+            document.getElementById('resWordCount').textContent = words;
+
+            // Segments table
+            const tbody = document.getElementById('segmentsTableBody');
+            tbody.innerHTML = '';
+            const segments = result.segments || [];
+            document.getElementById('segmentsCount').textContent = segments.length;
+
+            segments.forEach((seg, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td><span class="ts-tag">${seg.start.toFixed(2)}s - ${seg.end.toFixed(2)}s</span></td>
+                    <td>${seg.text}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const resultsCard = document.getElementById('resultsContainer');
+            resultsCard.classList.add('visible');
+            resultsCard.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Export Utilities
+        function copyTranscription() {
+            if (!currentResult) return;
+            navigator.clipboard.writeText(currentResult.result.text);
+            alert('Transcription text copied to clipboard!');
+        }
+
+        function downloadTxt() {
+            if (!currentResult) return;
+            const blob = new Blob([currentResult.result.text], { type: 'text/plain' });
+            downloadFile(blob, 'transcription.txt');
+        }
+
+        function downloadJson() {
+            if (!currentResult) return;
+            const blob = new Blob([JSON.stringify(currentResult, null, 2)], { type: 'application/json' });
+            downloadFile(blob, 'transcription.json');
+        }
+
+        function downloadSrt() {
+            if (!currentResult || !currentResult.result.segments) return;
+            const segments = currentResult.result.segments;
+            let srt = '';
+            segments.forEach((seg, idx) => {
+                const start = formatTimestamp(seg.start);
+                const end = formatTimestamp(seg.end);
+                srt += `${idx + 1}\n${start} --> ${end}\n${seg.text}\n\n`;
+            });
+            const blob = new Blob([srt], { type: 'text/plain' });
+            downloadFile(blob, 'subtitles.srt');
+        }
+
+        function formatTimestamp(seconds) {
+            const d = new Date(seconds * 1000);
+            const hh = String(Math.floor(seconds / 3600)).padStart(2, '0');
+            const mm = String(d.getUTCMinutes()).padStart(2, '0');
+            const ss = String(d.getUTCSeconds()).padStart(2, '0');
+            const ms = String(d.getUTCMilliseconds()).padStart(3, '0');
+            return `${hh}:${mm}:${ss},${ms}`;
+        }
+
+        function downloadFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
     </script>
 </body>
 </html>

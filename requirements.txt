@@ -1,3 +1,5 @@
-openai-whisper
+openai-whisper>=20231117
 flask>=3.0.0
 pytest>=7.4.0
+imageio-ffmpeg>=0.4.9
+requests>=2.28.0

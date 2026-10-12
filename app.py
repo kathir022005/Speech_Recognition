@@ -3,7 +3,7 @@ app.py - Flask Web Application for ASR Tool
 =============================================
 
 Provides a web-based interface and REST API for the ASR tool.
-Users can upload audio files through the browser or send requests
+Users can upload audio files, record live from microphone, or send requests
 to the API endpoints for transcription.
 """
 
@@ -12,7 +12,7 @@ import uuid
 import logging
 from datetime import datetime
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory
 
 from asr_engine import ASREngine, SUPPORTED_FORMATS, AVAILABLE_MODELS
 
@@ -27,9 +27,11 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # 100 MB max upload
 app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(__file__), "uploads")
+app.config["SAMPLE_AUDIO_FOLDER"] = os.path.join(os.path.dirname(__file__), "sample_audio")
 
-# Ensure upload directory exists
+# Ensure directories exist
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+os.makedirs(app.config["SAMPLE_AUDIO_FOLDER"], exist_ok=True)
 
 # Global ASR engine instance (lazy-loaded)
 asr_engine = None
@@ -56,42 +58,52 @@ def allowed_file(filename: str) -> bool:
 
 @app.route("/")
 def index():
-    """Render the main page."""
+    """Render the main dashboard page."""
+    # List available sample audios
+    samples = []
+    if os.path.exists(app.config["SAMPLE_AUDIO_FOLDER"]):
+        for f in os.listdir(app.config["SAMPLE_AUDIO_FOLDER"]):
+            if any(f.lower().endswith(ext) for ext in SUPPORTED_FORMATS):
+                samples.append(f)
+
     return render_template(
         "index.html",
         models=AVAILABLE_MODELS,
         formats=sorted(SUPPORTED_FORMATS),
+        samples=samples,
     )
+
+
+@app.route("/sample_audio/<path:filename>")
+def serve_sample_audio(filename):
+    """Serve sample audio files for quick browser preview/testing."""
+    return send_from_directory(app.config["SAMPLE_AUDIO_FOLDER"], filename)
 
 
 @app.route("/transcribe", methods=["POST"])
 def transcribe():
-    """Handle audio file upload and transcription from the web form."""
+    """Handle audio file upload and transcription from the web form or AJAX."""
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.accept_mimetypes.best == "application/json"
+
     # Check if a file was uploaded
     if "audio_file" not in request.files:
-        return render_template(
-            "index.html",
-            error="No file uploaded.",
-            models=AVAILABLE_MODELS,
-            formats=sorted(SUPPORTED_FORMATS),
-        )
+        error_msg = "No audio file provided in request."
+        if is_ajax:
+            return jsonify({"success": False, "error": error_msg}), 400
+        return render_template("index.html", error=error_msg, models=AVAILABLE_MODELS, formats=sorted(SUPPORTED_FORMATS))
 
     file = request.files["audio_file"]
     if file.filename == "":
-        return render_template(
-            "index.html",
-            error="No file selected.",
-            models=AVAILABLE_MODELS,
-            formats=sorted(SUPPORTED_FORMATS),
-        )
+        error_msg = "No file selected."
+        if is_ajax:
+            return jsonify({"success": False, "error": error_msg}), 400
+        return render_template("index.html", error=error_msg, models=AVAILABLE_MODELS, formats=sorted(SUPPORTED_FORMATS))
 
     if not allowed_file(file.filename):
-        return render_template(
-            "index.html",
-            error=f"Unsupported file format. Supported: {sorted(SUPPORTED_FORMATS)}",
-            models=AVAILABLE_MODELS,
-            formats=sorted(SUPPORTED_FORMATS),
-        )
+        error_msg = f"Unsupported file format. Supported: {sorted(SUPPORTED_FORMATS)}"
+        if is_ajax:
+            return jsonify({"success": False, "error": error_msg}), 400
+        return render_template("index.html", error=error_msg, models=AVAILABLE_MODELS, formats=sorted(SUPPORTED_FORMATS))
 
     # Save the uploaded file
     unique_name = f"{uuid.uuid4().hex}_{file.filename}"
@@ -99,18 +111,24 @@ def transcribe():
     file.save(filepath)
 
     try:
-        # Get parameters
         model_name = request.form.get("model", "base")
         language = request.form.get("language", "").strip() or None
         task = request.form.get("task", "transcribe")
 
-        # Perform transcription
         engine = get_engine(model_name)
         result = engine.transcribe(
             audio_path=filepath,
             language=language,
             task=task,
         )
+
+        if is_ajax:
+            return jsonify({
+                "success": True,
+                "result": result,
+                "filename": file.filename,
+                "timestamp": datetime.utcnow().isoformat(),
+            })
 
         return render_template(
             "index.html",
@@ -122,15 +140,12 @@ def transcribe():
 
     except Exception as e:
         logger.error(f"Transcription failed: {e}")
-        return render_template(
-            "index.html",
-            error=f"Transcription failed: {str(e)}",
-            models=AVAILABLE_MODELS,
-            formats=sorted(SUPPORTED_FORMATS),
-        )
+        error_msg = f"Transcription failed: {str(e)}"
+        if is_ajax:
+            return jsonify({"success": False, "error": error_msg}), 500
+        return render_template("index.html", error=error_msg, models=AVAILABLE_MODELS, formats=sorted(SUPPORTED_FORMATS))
 
     finally:
-        # Clean up uploaded file
         if os.path.exists(filepath):
             os.remove(filepath)
 
@@ -144,15 +159,7 @@ def transcribe():
 def api_transcribe():
     """
     REST API endpoint for transcription.
-
-    Expects a multipart form with:
-        - audio_file: The audio file to transcribe
-        - model (optional): Whisper model size (default: 'base')
-        - language (optional): Language code (default: auto-detect)
-        - task (optional): 'transcribe' or 'translate' (default: 'transcribe')
-
-    Returns:
-        JSON response with transcription results.
+    Expects multipart form with 'audio_file' and optional 'model', 'language', 'task'.
     """
     if "audio_file" not in request.files:
         return jsonify({"error": "No audio file provided"}), 400
@@ -166,7 +173,6 @@ def api_transcribe():
             "error": f"Unsupported format. Supported: {sorted(SUPPORTED_FORMATS)}"
         }), 400
 
-    # Save file temporarily
     unique_name = f"{uuid.uuid4().hex}_{file.filename}"
     filepath = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
     file.save(filepath)
@@ -198,17 +204,34 @@ def api_transcribe():
             os.remove(filepath)
 
 
+@app.route("/api/quick-demo", methods=["POST"])
+def api_quick_demo():
+    """Execute transcription on an onboard sample audio file."""
+    data = request.get_json(silent=True) or request.form
+    sample_name = data.get("sample", "welcome_demo.wav")
+    model_name = data.get("model", "base")
+
+    target_path = os.path.join(app.config["SAMPLE_AUDIO_FOLDER"], sample_name)
+    if not os.path.exists(target_path):
+        return jsonify({"success": False, "error": f"Sample not found: {sample_name}"}), 404
+
+    try:
+        engine = get_engine(model_name)
+        result = engine.transcribe(audio_path=target_path)
+        return jsonify({
+            "success": True,
+            "result": result,
+            "filename": sample_name,
+            "timestamp": datetime.utcnow().isoformat(),
+        })
+    except Exception as e:
+        logger.error(f"Quick demo failed: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route("/api/detect-language", methods=["POST"])
 def api_detect_language():
-    """
-    REST API endpoint for language detection.
-
-    Expects a multipart form with:
-        - audio_file: The audio file to analyze
-
-    Returns:
-        JSON response with detected language info.
-    """
+    """Detect spoken language in audio file."""
     if "audio_file" not in request.files:
         return jsonify({"error": "No audio file provided"}), 400
 
@@ -251,6 +274,7 @@ def api_health():
     return jsonify({
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
+        "backend": "OpenAI Whisper + Flask",
     })
 
 

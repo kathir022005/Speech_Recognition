@@ -8,11 +8,37 @@ preprocessing, transcription, and language detection.
 """
 
 import os
+import sys
 import time
+import shutil
 import logging
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+# Ensure FFmpeg is accessible via imageio-ffmpeg or system path
+def _ensure_ffmpeg():
+    if shutil.which("ffmpeg"):
+        return
+    scripts_dir = os.path.join(sys.prefix, "Scripts")
+    if os.path.exists(os.path.join(scripts_dir, "ffmpeg.exe")):
+        os.environ["PATH"] = scripts_dir + os.pathsep + os.environ.get("PATH", "")
+        return
+    try:
+        import imageio_ffmpeg
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+        ffmpeg_dir = os.path.dirname(ffmpeg_exe)
+        target = os.path.join(ffmpeg_dir, "ffmpeg.exe")
+        if not os.path.exists(target):
+            try:
+                shutil.copy2(ffmpeg_exe, target)
+            except Exception:
+                pass
+        os.environ["PATH"] = ffmpeg_dir + os.pathsep + scripts_dir + os.pathsep + os.environ.get("PATH", "")
+    except Exception as e:
+        logger.debug(f"Could not auto-configure ffmpeg: {e}")
+
+_ensure_ffmpeg()
 
 # Lazy imports for heavy dependencies to allow server startup and testing
 try:
@@ -141,12 +167,12 @@ class ASREngine:
                 logger.warning(f"Native WAV decode fallback ({e}), attempting ffmpeg backend...")
 
         # Fallback to ffmpeg backend via whisper.load_audio
+        _ensure_ffmpeg()
         try:
             return whisper.load_audio(audio_path)
         except Exception as e:
             raise RuntimeError(
-                f"Failed to decode audio file '{os.path.basename(audio_path)}'. "
-                f"For non-WAV formats, FFmpeg must be installed. Error: {e}"
+                f"Failed to decode audio file '{os.path.basename(audio_path)}': {e}"
             )
 
     def transcribe(
